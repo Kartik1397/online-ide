@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap');
+
+* {
+  outline: none;
+  margin: 0;
+}
+
+.App {
+  text-align: center;
+}
+
+.body {
+  background-color: #EDF5FC;
+  color: #394053;
+  font-family: 'Montserrat', sans-serif;
+  transition: all .2s ease-in-out;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+#color-mode {
+  float: left;
+  display: none;
+}
+
+.color {
+  content: 'Dark';
+}
+
+#color-mode:checked ~ .body {
+  filter: invert(.87) hue-rotate(180deg);
+}
+
+.main {
+  width: 90vw;
+  height: 130vh;
+  display: grid;
+  grid-template-rows: 10vh 90vh 30vh;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header label {
+  display: inline-block;
+  background-color: rgba(0, 0, 0, .1);
+  padding: 3px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.heading {
+  display: inline-block;
+}
+
+.ide {
+  height: 90vh;
+  display: grid;
+  grid-template-columns: 50vw 40vw;
+}
+
+.editor {
+  display: inline-block;
+}
+
+.CodeMirror {
+  display: inline-block;
+  height: 650px;
+  width: 100%;
+  font-size: 1em;
+  border-radius: 10px;
+  border: 1px solid #EDF5FC;
+}
+
+.io {
+  height: 80vh;
+  display: grid;
+  grid-template-rows: 1fr 1fr 1fr;
+  grid-gap: 20px;
+  padding-left: 35px;
+}
+
+.io-block {
+  display: grid;
+  grid-template-rows: 35px auto;
+}
+
+label {
+  font-size: 1.2em;
+}
+
+textarea {
+  height: calc(100% - 14px);
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  padding: 7px;
+  resize: none;
+}
+
+textarea:focus {
+  border: 1px solid #96EDBB;
+}
+
+.submit {
+  display: flex;
+  flex-direction: row-reverse;
+  margin: 5px;
+}
+
+input[type="submit"] {
+  background-color: #23CE6B;
+  color: white;
+  border: none;
+  margin: 10px;
+  margin-left: 20px;
+  margin-right: 0;
+  padding: 5px 20px;
+  font-size: 1.1em;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .1s ease-in-out;
+}
+
+input[type="submit"]:hover {
+  background-color: rgb(41, 223, 118);
+  box-shadow: 2px 2px 3px rgba(0, 0, 0, .07);
+}
+
+.submit h4 {
+  margin: auto 0;
+}
+
+.err textarea {
+  width: 100%;
+}
+
+.err label {
+  color: #FB6072;
+}
+
+#status {
+  color: #647FA6;
+}
+
+.main {
+  padding-bottom: 70px;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .ide {
+    grid-template-columns: 1fr;
+    width: 90vw;
+  }
+
+  .editor {
+    width: 90vw;
+  }
+}
+
+.cm-editor {
+  background: white;
+  border-radius: 10px;
+  font-size: 16px;
+  height: 80vh;
+
+}
+
+.cm-editor.cm-focused { outline: none }
+
+.cm-editor .cm-gutters {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  background-color: #cbd5e1;
+}
+
+.cm-editor .cm-activeLineGutter {
+  background-color: #cbd5e1;
+}
+
+.cm-editor .cm-scroller {
+  border-radius: 10px;
+}
+
+.cm-editor .cm-content {
+  padding: 8px 0;
+}
+
+.cm-editor .cm-gutter {
+  color: #4672a8;
+}
