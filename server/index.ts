@@ -2,9 +2,8 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import taskRouter from './routes/task';
-import axios from 'axios';
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT;
 
 const app = express();
 app.use(cors());
@@ -18,5 +17,4 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Listening on ${PORT}!`);
-  axios.get("http://sheltered-wave-36478.herokuapp.com/").then(res => console.log(res.status));
 });

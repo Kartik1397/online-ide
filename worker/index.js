@@ -1,109 +1,93 @@
-const http = require('http');
-var request = require('request');
 const fs = require('fs');
-const { exec } = require('child_process');
+const exec = require('child_process').exec;
+const uuid4 = require('uuid').v4;
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
 
-http.createServer(function (req, res) {
-  res.write('Hello World!'); //write a response to the client
-  res.end(); //end the response
-}).listen(process.env.PORT || 5000); //the server object listens on port 8080
+const PROTO_PATH = __dirname + '/protos/worker.proto';
 
-const API = 'http://server:4000/task';
-
-function run() {
-    http.get(API + '/assign', (resp) => {
-        let data = '';
-        resp.on('data', (chunk) => {
-            data += chunk;
-        });
-        resp.on('end', async () => {
-            if (!fs.existsSync('./codes')) {
-                fs.mkdirSync('./codes');
-            }
-            if (data == "{}") {
-                return;
-            }
-            console.log("received");
-            data = JSON.parse(data);
-            
-            fs.writeFileSync('./codes/'+data._id+'.cpp', data.code, (err) => {
-                if (err) {
-                    return console.log(err);
-                }
-                console.log("The file was saved!");
-            });
-
-            
-            await exec('g++ ' + './codes/' + data._id + '.cpp', async (err, stdout, stderr) => {
-                if (err) {
-                    data.err = stderr;
-                    console.log('g++ failed with: ' + err);
-                    submitTask(data);
-                    return;
-                }
-                exec('ulimit -S -v 1', (err, stdout, stderr) => {
-                    if (err) {
-                        console.log('Error: ulimit: ' + err);
-                        return;
-                    }
-                    console.log("setting limit to process");
-                    console.log(`ulimit: stdout: ${stdout}`);
-                    console.log(`ulimit: stderr: ${stderr}`);
-                    console.log("process runnig");
-                    var process = exec('echo "' + data.input + '" | ./a.out', { timeout: 10000 },(err, stdout, stderr) => {
-                        if (err) {
-                            console.log("Error while executing ./a.out");
-                            submitTask(data);
-                            return;
-                        }
-                        console.log(`stdout: \n${stdout}`);
-                        console.log(`stderr: ${stderr}`);
-                        
-                        exec('ulimit -S -v unlimited', (err, stdout, stderr) => {
-                            if (err) {
-                                console.log('Error: ulimit: ' + err);
-                                return;
-                            }
-                            console.log('resetting limit to process');
-                            console.log(`ulimit: stdout: ${stdout}`);
-                            console.log(`ulimit: stderr: ${stderr}`);
-                        });
-
-                        if (stdout)
-                            data.stdout = stdout;
-                        if (stderr)
-                            data.stderr = stderr;
-                        submitTask(data);
-                    });
-                });
-            });
-
-        });
-    }).on('error', (err) => {
-        console.log('Error: ' + err.message);
-    });
-    setTimeout(run, 1000);
+const asyncExec = (cmd) => {
+  return new Promise((resolve, rejects) => {
+    exec(cmd, (err, stdout, stderr) => {
+      if (err) {
+        rejects(err, stderr);
+      }
+      resolve({ stdout, stderr });
+    })
+  })
 }
-run();
-function submitTask(data) {
-    request.post({
-        url: API + "/submit",
-        method: "POST",
-        json: true,
-        body: {
-            email: data.email,
-            code: data.code,
-            input: data.input,
-            err: data.err,
-            stdout: data.stdout,
-            stderr: data.stderr,
-            status: data.status,
-            _id: data._id
-        } 
-    },
-    function (err, Response, body) {
-        if (!err) {
-            console.log(body);
-        }
-    });
+
+var packageDefinition = protoLoader.loadSync(
+  PROTO_PATH,
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true
+  });
+
+const protoDesciptor = grpc.loadPackageDefinition(packageDefinition);
+
+const worker = protoDesciptor.worker;
+const Server = new grpc.Server();
+
+function runCode(call) {
+  getResult(call.request, call);
 }
+
+async function getResult({ code, input }, call) {
+  return await compileCode(code, input, call)
+}
+
+const compileCode = async (code, input, call) => {
+  if (!fs.existsSync('./codes')) {
+    fs.mkdirSync('./codes');
+  }
+
+  const name = uuid4();
+  fs.writeFileSync(`./codes/${name}.cpp`, code);
+
+  call.write({
+    type: "QUEUED",
+    stdout: '',
+    stderr: ''
+  })
+
+  try {
+    await asyncExec(`g++ ./codes/${name}.cpp -o ${name}.out`);
+
+    call.write({
+      type: "RUNNING",
+      stdout: '',
+      stderr: ''
+    })
+
+    await asyncExec('ulimit -S -v 1');
+    let { stdout, stderr } = await asyncExec(`echo "${input}" | ./${name}.out`);
+
+    call.write({
+      type: "SUCCESS",
+      stdout: stdout,
+      stderr: stderr
+    });
+
+  } catch (err) {
+    call.write({
+      type: "COMPILATION_FAILED",
+      stdout: '',
+      stderr: err
+    })
+  }
+  call.end();
+  fs.unlinkSync(`./codes/${name}.cpp`);
+  fs.unlinkSync(`./${name}.out`);
+}
+
+Server.addService(worker.Worker.service, {
+  runCode: runCode
+});
+
+Server.bindAsync('0.0.0.0:'+process.env.PORT, grpc.ServerCredentials.createInsecure(), () => {
+  Server.start();
+});

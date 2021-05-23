@@ -1,11 +1,25 @@
 import { v4 as uuid4 } from 'uuid';
+import * as grpc from '@grpc/grpc-js';
+import { loadSync } from '@grpc/proto-loader';
 
-const tasks: any = {};
+const PROTO_PATH = __dirname + '/../protos/worker.proto';
+
+var packageDefinition = loadSync(
+  PROTO_PATH,
+  {keepCase: true,
+   longs: String,
+   enums: String,
+   defaults: true,
+   oneofs: true
+  });
+
+const worker: any = grpc.loadPackageDefinition(packageDefinition).worker;
+const client: any = new worker.Worker('worker:5000', grpc.credentials.createInsecure());
+
 const id_status: any = {};
 
 export const create = (req: any, res: any) => {
   const task = {
-    ...req.body,
     _id: uuid4(),
     err: "",
     stdout: "",
@@ -13,8 +27,37 @@ export const create = (req: any, res: any) => {
     status: "pending"
   };
 
-  tasks[task._id] = task;
   console.log(task);
+
+  client.runCode({code: req.body.code, input: req.body.input})
+    .on('data', (data: any) => {
+      switch (data.type) {
+        case 'QUEUED':
+          task.status = "Queued";
+          break;
+        case 'RUNNING':
+          task.status = "Running";
+          break;
+        case 'COMPILATION_FAILED':
+        case'RE':
+        case 'TE':
+        case 'MLE':
+        case 'SUCCESS':
+          task.status = "Completed";
+          task.stderr = data.stderr;
+          task.stdout = data.stdout;
+          break;
+        default:
+          break;
+      }
+      if (task._id in id_status) {
+        console.log("Hi");
+        id_status[task._id].write(`data: ${JSON.stringify(task)}\n\n`);
+      }
+    })
+    .on('end', () => {
+      console.log('end')
+    });
 
   res.json(task);
 }
@@ -32,37 +75,4 @@ export const find_by_id = (req: any, res: any) => {
   res.on('close', () => {
     delete id_status[req.params.taskId];
   })
-}
-
-export const submit = (req: any, res: any) => {
-  var completed_task = req.body;
-  tasks[completed_task._id].status = 'completed';
-  tasks[completed_task._id].stdout = completed_task.stdout;
-  tasks[completed_task._id].stderr = completed_task.stderr;
-  tasks[completed_task._id].err = completed_task.err;
-  if (completed_task._id in id_status) {
-    id_status[completed_task._id].write(`data: ${JSON.stringify({status: "completed", data: tasks[completed_task._id]})}\n\n`)
-    id_status[completed_task._id].end();
-  }
-  console.log(tasks[completed_task._id]);
-  res.send(JSON.stringify("submitted"));
-}
-
-export const assing = (req: any, res: any) => {
-  if (Object.keys(tasks).filter(key => tasks[key].status === 'pending').length > 0) {
-    const id = Object.keys(tasks).filter(key => tasks[key].status === 'pending')[0];
-    if (id in id_status) {
-      id_status[id].write(`data: ${JSON.stringify({status: "running"})}\n\n`)
-    }
-    tasks[id].status = "running";
-    console.log(tasks[id]);
-    res.json(tasks[id]);
-  } else {
-    res.json({});
-  }
-}
-
-export const all = (req: any, res: any) => {
-  console.log(tasks);
-  res.json(tasks);
 }
