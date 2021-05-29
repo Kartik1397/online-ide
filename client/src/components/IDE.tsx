@@ -88,7 +88,7 @@ const IDE = () => {
         setStatus("Uploaded");
         setId(res.data._id);
       }).catch(err => {
-        if (err?.response.status === 429) {
+        if (err?.response?.status === 429) {
           console.log("hi");
           setStatus("Try again after 10 sec")
           setRunDisabled(true);
