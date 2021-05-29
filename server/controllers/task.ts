@@ -14,7 +14,7 @@ var packageDefinition = loadSync(
   });
 
 const worker: any = grpc.loadPackageDefinition(packageDefinition).worker;
-const client: any = new worker.Worker('worker:5000', grpc.credentials.createInsecure());
+const client: any = new worker.Worker(process.env.DOMAIN, grpc.credentials.createInsecure());
 
 const id_status: any = {};
 
