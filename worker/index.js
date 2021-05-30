@@ -88,6 +88,15 @@ Server.addService(worker.Worker.service, {
   runCode: runCode
 });
 
-Server.bindAsync('0.0.0.0:'+process.env.PORT, grpc.ServerCredentials.createInsecure(), () => {
+let credentials = grpc.ServerCredentials.createSsl(
+	null,
+  [{
+		cert_chain: fs.readFileSync('./tls/tls.crt'),
+		private_key: fs.readFileSync('./tls/tls.key'),
+	}],
+  true
+);
+
+Server.bindAsync('0.0.0.0:'+process.env.PORT, credentials, () => {
   Server.start();
 });

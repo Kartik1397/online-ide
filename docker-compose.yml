@@ -8,7 +8,7 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
-      - DOMAIN=worker:5000
+      - DOMAIN=online-ide-worker2-kartikprajapati987-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com
     volumes:
       - "./server:/server"
       - /server/node_modules
