@@ -1,10 +1,7 @@
 const fs = require('fs');
 const exec = require('child_process').exec;
 const uuid4 = require('uuid').v4;
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
-
-const PROTO_PATH = __dirname + '/protos/worker.proto';
+const WebSocketServer = require('rpc-websockets').Server;
 
 const asyncExec = (cmd) => {
   return new Promise((resolve, rejects) => {
@@ -14,26 +11,11 @@ const asyncExec = (cmd) => {
       }
       resolve({ stdout, stderr });
     })
-  })
+  });
 }
 
-var packageDefinition = protoLoader.loadSync(
-  PROTO_PATH,
-  {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true
-  });
-
-const protoDesciptor = grpc.loadPackageDefinition(packageDefinition);
-
-const worker = protoDesciptor.worker;
-const Server = new grpc.Server();
-
-function runCode(call) {
-  getResult(call.request, call);
+function runCode() {
+  return '1234';
 }
 
 async function getResult({ code, input }, call) {
@@ -84,19 +66,9 @@ const compileCode = async (code, input, call) => {
   fs.unlinkSync(`./${name}.out`);
 }
 
-Server.addService(worker.Worker.service, {
-  runCode: runCode
+const server = new WebSocketServer({
+  port: '8080',
+  host: '0.0.0.0'
 });
 
-let credentials = grpc.ServerCredentials.createSsl(
-	null,
-  [{
-		cert_chain: fs.readFileSync('./tls/tls.crt'),
-		private_key: fs.readFileSync('./tls/tls.key'),
-	}],
-  true
-);
-
-Server.bindAsync('0.0.0.0:'+process.env.PORT, credentials, () => {
-  Server.start();
-});
+server.register('runCode', runCode);
