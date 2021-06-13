@@ -1,10 +1,7 @@
 const fs = require('fs');
 const exec = require('child_process').exec;
 const uuid4 = require('uuid').v4;
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
-
-const PROTO_PATH = __dirname + '/protos/worker.proto';
+const WebSocketServer = require('rpc-websockets').Server;
 
 const asyncExec = (cmd) => {
   return new Promise((resolve, rejects) => {
@@ -14,33 +11,20 @@ const asyncExec = (cmd) => {
       }
       resolve({ stdout, stderr });
     })
-  })
-}
-
-var packageDefinition = protoLoader.loadSync(
-  PROTO_PATH,
-  {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true
   });
-
-const protoDesciptor = grpc.loadPackageDefinition(packageDefinition);
-
-const worker = protoDesciptor.worker;
-const Server = new grpc.Server();
-
-function runCode(call) {
-  getResult(call.request, call);
 }
 
-async function getResult({ code, input }, call) {
-  return await compileCode(code, input, call)
+function runCode({code, input, _id}) {
+  server.event(_id);
+  getResult({ code, input }, _id);
+  return _id;
 }
 
-const compileCode = async (code, input, call) => {
+async function getResult({ code, input }, eventId) {
+  return await compileCode(code, input, eventId)
+}
+
+const compileCode = async (code, input, eventId) => {
   if (!fs.existsSync('./codes')) {
     fs.mkdirSync('./codes');
   }
@@ -48,16 +32,16 @@ const compileCode = async (code, input, call) => {
   const name = uuid4();
   fs.writeFileSync(`./codes/${name}.cpp`, code);
 
-  call.write({
+  server.emit(eventId, {
     type: "QUEUED",
     stdout: '',
     stderr: ''
-  })
+  });
 
   try {
     await asyncExec(`g++ ./codes/${name}.cpp -o ${name}.out`);
 
-    call.write({
+    server.emit(eventId, {
       type: "RUNNING",
       stdout: '',
       stderr: ''
@@ -66,37 +50,26 @@ const compileCode = async (code, input, call) => {
     await asyncExec('ulimit -S -v 1');
     let { stdout, stderr } = await asyncExec(`echo "${input}" | ./${name}.out`);
 
-    call.write({
+    server.emit(eventId, {
       type: "SUCCESS",
       stdout: stdout,
       stderr: stderr
-    });
+    })
 
   } catch (err) {
-    call.write({
+    server.emit(eventId, {
       type: "COMPILATION_FAILED",
       stdout: '',
       stderr: err
     })
   }
-  call.end();
   fs.unlinkSync(`./codes/${name}.cpp`);
   fs.unlinkSync(`./${name}.out`);
 }
 
-Server.addService(worker.Worker.service, {
-  runCode: runCode
+const server = new WebSocketServer({
+  port: process.env.PORT,
+  host: '0.0.0.0'
 });
 
-let credentials = grpc.ServerCredentials.createSsl(
-	null,
-  [{
-		cert_chain: fs.readFileSync('./tls/tls.crt'),
-		private_key: fs.readFileSync('./tls/tls.key'),
-	}],
-  true
-);
-
-Server.bindAsync('0.0.0.0:'+process.env.PORT, credentials, () => {
-  Server.start();
-});
+server.register('runCode', runCode);
