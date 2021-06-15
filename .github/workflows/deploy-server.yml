@@ -17,3 +17,4 @@ jobs:
           heroku_email: ${{secrets.EMAIL}}
           appdir: "server"
           stack: "container"
+          usedocker: true
