@@ -11,11 +11,8 @@ const rateLimiter = rateLimit({
 
 const router = express.Router();
 
-router.get('/', function(req, res) {
-  res.send(JSON.stringify("hello"));
-});
-
+router.get('/', (req, res) => { res.send(JSON.stringify("hello")); });
 router.post('/create', rateLimiter, task.create);
-router.get('/:taskId', task.find_by_id);
+router.get('/events', task.events);
 
 export default router;

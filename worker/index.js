@@ -67,9 +67,14 @@ const compileCode = async (code, input, eventId) => {
   fs.unlinkSync(`./${name}.out`);
 }
 
+function status() {
+  return 'up';
+}
+
 const server = new WebSocketServer({
   port: process.env.PORT,
   host: '0.0.0.0'
 });
 
 server.register('runCode', runCode);
+server.register('status', status);

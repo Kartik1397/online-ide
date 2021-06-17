@@ -8,89 +8,121 @@ import axios from 'axios';
 
 const API = process.env.REACT_APP_API;
 let view: any;
+
+const QUEUED = 'QUEUED';
+const RUNNING = 'RUNNING';
+const SERVER_CONNECTING = 'SERVER_CONNECTING';
+const SERVER_UP = 'SERVER_UP';
+const WORKER_UP = 'WORKER_UP';
+const UPLOADING = 'UPLOADING';
+const UPLOADED = 'UPLOADED';
+const RATE_LIMITED = 'RATE_LIMITED';
+const COMPLETED = 'COMPLETED';
+
+const statusMessage: any = {
+  [QUEUED]: 'Queued',
+  [RUNNING]: 'Running',
+  [SERVER_CONNECTING]: 'Connecting to Server',
+  [SERVER_UP]: 'Connecting to Worker',
+  [WORKER_UP]: 'Ready',
+  [UPLOADING]: 'Uploading',
+  [UPLOADED]: 'Uploaded',
+  [RATE_LIMITED]: 'Try again after 10 sec',
+  [COMPLETED]: 'Completed'
+};
+
 const IDE = () => {
   const [code, setCode] = useState('#include <iostream>\n\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n}');
   const [stdout, setStdout] = useState('');
   const [stderr, setStderr] = useState('');
   const [error, setError] = useState('');
   const [id, setId] = useState(null);
-  const [status, setStatus] = useState('Ready');
+  const [status, setStatus] = useState(SERVER_CONNECTING);
   const [input, setInput] = useState('');
   const [runDisabled, setRunDisabled] = useState(false);
-
-  const update = useCallback(() => {
-    if (id) {
-      const source = new EventSource(API + '/' + id);
-      source.addEventListener('message', msg => {
-        const data = JSON.parse(msg.data);
-        switch (data.status) {
-          case 'Queued': case 'Running':
-            break;
-          default:
-            setStdout(data.stdout);
-            setStderr(data.stderr);
-            setError(data.err);
-            setId(null);
-            source.close();
-        }
-        setStatus(data.status);
-      });
-    }
-  }, [id])
+  const [isLoading, setIsLoading] = useState(true);
+  const [isWorkerConnected, setIsWorkerConnected] = useState(false);
+  const [eventStreamId, setEventStreamId] = useState(null);
 
   useEffect(() => {
-    update();
-  }, [id, update]);
-
-  useEffect(() => {
-    var colorLabel = document.getElementById('color');
-    var checkbox: any = document.getElementById('color-mode');
-    checkbox.addEventListener('change', () => {
-      if (colorLabel) {
-        if (checkbox?.checked) {
-          colorLabel.innerText = "Light";
-        } else {
-          colorLabel.innerText = "Dark";
-        }
+    const source = new EventSource(API + '/events');
+    source.addEventListener('message', msg => {
+      const data = JSON.parse(msg.data);
+      console.log(data);
+      switch (data.status) {
+        case 'QUEUED': case 'RUNNING':
+          break;
+        case 'SERVER_UP':
+          setEventStreamId(data.eventStreamId);
+          setIsLoading(false);
+          break;
+        case 'WORKER_UP':
+          setIsWorkerConnected(true);
+          break;
+        default:
+          setStdout(data.stdout);
+          setStderr(data.stderr);
+          setError(data.err);
+          setId(null);
       }
-    });
+      setStatus(statusMessage[data.status]);
+  });
   }, []);
 
   const editor = useRef() as React.MutableRefObject<HTMLInputElement>;
 
   useEffect(() => {
-    const state = EditorState.create({
-      doc: code,
-      extensions: [
-        basicSetup,
-        keymap.of([defaultTabBinding]),
-        cpp()
-      ]
-    });
-    view = new EditorView({
-      state,
-      parent: editor.current
-    });
-    return () => {
-      view.destroy();
-    };
-  });
+    if (!isLoading) {
+      var colorLabel = document.getElementById('color');
+      var checkbox: any = document.getElementById('color-mode');
+      checkbox.addEventListener('change', () => {
+        if (colorLabel) {
+          if (checkbox?.checked) {
+            colorLabel.innerText = "Light";
+          } else {
+            colorLabel.innerText = "Dark";
+          }
+        }
+      });
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      const state = EditorState.create({
+        doc: code,
+        extensions: [
+          basicSetup,
+          keymap.of([defaultTabBinding]),
+          cpp()
+        ]
+      });
+      view = new EditorView({
+        state,
+        parent: editor.current
+      });
+      return () => {
+        view.destroy();
+      };  
+    }
+  }, [isLoading]);
 
   const handleSubmit = (event: any) => {
     event.preventDefault();
     if (runDisabled) return;
     setCode(view.state.doc.toString());
-    setStatus("Uploading")
+    setStatus(statusMessage[UPLOADING]);
     axios.post(API + "/create", {
       code: view.state.doc.toString(),
-      input: input
+      input: input,
+      eventStreamId: eventStreamId
     }).then((res) => {
-        setStatus("Uploaded");
+        setStatus(statusMessage[UPLOADED]);
         setId(res.data._id);
       }).catch(err => {
         if (err?.response?.status === 429) {
           console.log("hi");
-          setStatus("Try again after 10 sec")
+          setStatus(statusMessage[RATE_LIMITED])
           setRunDisabled(true);
           setTimeout(() => {
             setRunDisabled(false);
@@ -99,6 +131,12 @@ const IDE = () => {
         }
       });
   };
+
+  if (isLoading) {
+    return(
+      <div className="loading-screen">Connecting to server...</div>
+    )
+  }
 
   return (
     <div>
@@ -113,7 +151,9 @@ const IDE = () => {
             <div className="editor">
               <div ref={editor} style={{ height: "80vh" }}></div>
               <div className="submit">
-                <input type="submit" value="Run" onClick={handleSubmit}></input>
+                {
+                  isWorkerConnected && <input type="submit" value="Run" onClick={handleSubmit}></input>
+                }
                 <h4><span id="status">{status}</span></h4>
               </div>
             </div>

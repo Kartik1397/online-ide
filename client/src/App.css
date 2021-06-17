@@ -227,3 +227,18 @@ input[type="submit"]:hover {
 .cm-editor .cm-gutter {
   color: #4672a8;
 }
+
+.loading-screen {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  place-items: center center;
+  font-size: 32px;
+  font-weight: 200;
+}
+
+@media (max-width: 600px) {
+  .loading-screen {
+    font-size: 24px;
+  }
+}

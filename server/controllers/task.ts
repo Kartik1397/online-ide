@@ -7,6 +7,12 @@ ws.on('close', () => console.log('websocket closed'));
 
 const id_status: any = {};
 
+const QUEUED = 'QUEUED';
+const RUNNING = 'RUNNING';
+const SERVER_UP = 'SERVER_UP';
+const WORKER_UP = 'WORKER_UP';
+const COMPLETED = 'COMPLETED';
+
 export const create = (req: any, res: any) => {
   const task = {
     _id: uuid4(),
@@ -16,31 +22,33 @@ export const create = (req: any, res: any) => {
     status: "pending"
   };
 
-  ws.call('runCode', {code: req.body.code, input: req.body.input, _id: task._id})
+  const {code, input, eventStreamId} = req.body;
+
+  ws.call('runCode', {code: code, input: input, _id: task._id})
     .then((id) => {
       ws.subscribe(task._id);
       ws.on(task._id, (data) => {
         switch (data.type) {
           case 'QUEUED':
-            task.status = "Queued";
+            task.status = QUEUED;
             break;
           case 'RUNNING':
-            task.status = "Running";
+            task.status = RUNNING;
             break;
           case 'COMPILATION_FAILED':
           case'RE':
           case 'TE':
           case 'MLE':
           case 'SUCCESS':
-            task.status = "Completed";
+            task.status = COMPLETED;
             task.stderr = data.stderr;
             task.stdout = data.stdout;
             break;
           default:
             break;
         }
-        if (task._id in id_status) {
-          id_status[task._id].write(`data: ${JSON.stringify(task)}\n\n`);
+        if (eventStreamId in id_status) {
+          id_status[eventStreamId].write(`data: ${JSON.stringify(task)}\n\n`);
         }
       })
     })
@@ -48,7 +56,7 @@ export const create = (req: any, res: any) => {
   res.json(task);
 }
 
-export const find_by_id = (req: any, res: any) => {
+export const events = (req: any, res: any) => {
   res.set({
     'Cache-Control': 'no-cache',
     'Content-Type': 'text/event-stream',
@@ -56,9 +64,18 @@ export const find_by_id = (req: any, res: any) => {
   });
   res.flushHeaders();
 
-  id_status[req.params.taskId] = res;
+  const eventStreamId = uuid4();
+  id_status[eventStreamId] = res;
 
   res.on('close', () => {
-    delete id_status[req.params.taskId];
+    delete id_status[eventStreamId];
+  })
+
+  res.write(`data: ${JSON.stringify({status: SERVER_UP, eventStreamId })}\n\n`);
+
+  ws.call('status').then(ret => {
+    if (ret === 'up') {
+      res.write(`data: ${JSON.stringify({status: WORKER_UP})}\n\n`)
+    }
   })
 }
