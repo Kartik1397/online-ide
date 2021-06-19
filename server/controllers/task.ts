@@ -22,12 +22,12 @@ export const create = (req: any, res: any) => {
     status: "pending"
   };
 
-  const {code, input, eventStreamId} = req.body;
+  const { code, input, eventStreamId } = req.body;
 
-  ws.call('runCode', {code: code, input: input, _id: task._id})
-    .then((id) => {
+  ws.call('runCode', { code: code, input: input, _id: task._id })
+    .then((id: any) => {
       ws.subscribe(task._id);
-      ws.on(task._id, (data) => {
+      ws.on(task._id, (data: any) => {
         switch (data.type) {
           case 'QUEUED':
             task.status = QUEUED;
@@ -36,7 +36,7 @@ export const create = (req: any, res: any) => {
             task.status = RUNNING;
             break;
           case 'COMPILATION_FAILED':
-          case'RE':
+          case 'RE':
           case 'TE':
           case 'MLE':
           case 'SUCCESS':
@@ -52,8 +52,19 @@ export const create = (req: any, res: any) => {
         }
       })
     })
-    .catch((e) => console.log(e));
+    .catch((e: any) => console.log(e));
   res.json(task);
+}
+
+function sendWorkerStatusToClient(eventStreamId: any) {
+  ws.call('status').then((ret: any) => {
+    if (ret === 'up' && id_status[eventStreamId]) {
+      id_status[eventStreamId].write(`data: ${JSON.stringify({ status: WORKER_UP })}\n\n`)
+    }
+  }).catch((e: any) => {
+    setTimeout(() => sendWorkerStatusToClient(id_status[eventStreamId]), 2000);
+    console.log(e);
+  });
 }
 
 export const events = (req: any, res: any) => {
@@ -71,11 +82,7 @@ export const events = (req: any, res: any) => {
     delete id_status[eventStreamId];
   })
 
-  res.write(`data: ${JSON.stringify({status: SERVER_UP, eventStreamId })}\n\n`);
+  res.write(`data: ${JSON.stringify({ status: SERVER_UP, eventStreamId })}\n\n`);
 
-  ws.call('status').then(ret => {
-    if (ret === 'up') {
-      res.write(`data: ${JSON.stringify({status: WORKER_UP})}\n\n`)
-    }
-  })
+  sendWorkerStatusToClient(eventStreamId);
 }
