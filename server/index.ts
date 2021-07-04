@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import taskRouter from './routes/task';
+import taskRouter from './src/api/routes/task';
 
 const PORT = process.env.PORT;
 

@@ -135,6 +135,7 @@ textarea:focus {
   display: flex;
   flex-direction: row-reverse;
   margin: 5px;
+  min-height: 5vh;
 }
 
 input[type="submit"] {

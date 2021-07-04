@@ -1,9 +1,22 @@
 import { v4 as uuid4 } from 'uuid';
 import { Client as WebSocket } from 'rpc-websockets';
+import { Request, Response } from 'express';
 
-const ws = new WebSocket(`ws://${process.env.WORKER_URI}`);
-ws.on('open', () => console.log('websocket opened'));
-ws.on('close', () => console.log('websocket closed'));
+const ws = new WebSocket(`ws://${process.env.WORKER_URI}`, { max_reconnects: 0 });
+
+const queue: Number[] = [];
+let workerOnline = false;
+ws.on('open', () => {
+  console.log('websocket opened')
+  workerOnline = true;
+  queue.forEach((eventStreamId: Number) => {
+    sendWorkerStatusToClient(eventStreamId);
+  });
+});
+ws.on('close', () =>{
+  console.log('websocket closed')
+  workerOnline = false;
+});
 
 const id_status: any = {};
 
@@ -13,7 +26,7 @@ const SERVER_UP = 'SERVER_UP';
 const WORKER_UP = 'WORKER_UP';
 const COMPLETED = 'COMPLETED';
 
-export const create = (req: any, res: any) => {
+export const create = (req: Request, res: Response) => {
   const task = {
     _id: uuid4(),
     err: "",
@@ -57,6 +70,10 @@ export const create = (req: any, res: any) => {
 }
 
 function sendWorkerStatusToClient(eventStreamId: any) {
+  if (workerOnline === false) {
+    queue.push(eventStreamId);
+    return;
+  }
   ws.call('status').then((ret: any) => {
     if (ret === 'up' && id_status[eventStreamId]) {
       id_status[eventStreamId].write(`data: ${JSON.stringify({ status: WORKER_UP })}\n\n`)
@@ -67,7 +84,7 @@ function sendWorkerStatusToClient(eventStreamId: any) {
   });
 }
 
-export const events = (req: any, res: any) => {
+export const events = (req: Request, res: Response) => {
   res.set({
     'Cache-Control': 'no-cache',
     'Content-Type': 'text/event-stream',

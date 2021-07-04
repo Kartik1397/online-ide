@@ -36,7 +36,6 @@ const IDE = () => {
   const [stdout, setStdout] = useState('');
   const [stderr, setStderr] = useState('');
   const [error, setError] = useState('');
-  const [id, setId] = useState(null);
   const [status, setStatus] = useState(SERVER_CONNECTING);
   const [input, setInput] = useState('');
   const [runDisabled, setRunDisabled] = useState(false);
@@ -63,7 +62,6 @@ const IDE = () => {
           setStdout(data.stdout);
           setStderr(data.stderr);
           setError(data.err);
-          setId(null);
       }
       setStatus(statusMessage[data.status]);
   });
@@ -118,7 +116,6 @@ const IDE = () => {
       eventStreamId: eventStreamId
     }).then((res) => {
         setStatus(statusMessage[UPLOADED]);
-        setId(res.data._id);
       }).catch(err => {
         if (err?.response?.status === 429) {
           console.log("hi");
