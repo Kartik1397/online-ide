@@ -167,6 +167,8 @@ input[type="submit"]:hover {
 
 .err label {
   color: #FB6072;
+  display: block;
+  height: 35px;
 }
 
 #status {
