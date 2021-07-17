@@ -31,8 +31,31 @@ const statusMessage: any = {
   [COMPLETED]: 'Completed'
 };
 
+function useLocalStorage(key: string, initialValue: any) {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.log(error);
+      return initialValue;
+    }
+  });
+  const setValue = (value: any) => {
+    try {
+      const valueToStore =
+        value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  return [storedValue, setValue];
+}
+
 const IDE = () => {
-  const [code, setCode] = useState('#include <iostream>\n\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n}');
+  const [code, setCode] = useLocalStorage('code', '#include <iostream>\n\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n}');
   const [stdout, setStdout] = useState('');
   const [stderr, setStderr] = useState('');
   const [error, setError] = useState('');
@@ -91,8 +114,10 @@ const IDE = () => {
           } else {
             colorLabel.innerText = "Dark";
           }
+          localStorage.setItem('mode', colorLabel.innerText);
         }
       });
+      checkbox.checked = (localStorage.getItem('mode') === "Light");
     }
   }, [isLoading]);
 
@@ -110,9 +135,12 @@ const IDE = () => {
         state,
         parent: editor.current
       });
+      setInterval(() => {
+        setCode(view.state.doc.toString());
+      }, 2000);
       return () => {
         view.destroy();
-      };  
+      };
     }
   }, [isLoading]);
 
