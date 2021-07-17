@@ -36,17 +36,20 @@ const IDE = () => {
   const [stdout, setStdout] = useState('');
   const [stderr, setStderr] = useState('');
   const [error, setError] = useState('');
+  const [signal, setSignal] = useState('');
   const [status, setStatus] = useState(SERVER_CONNECTING);
   const [input, setInput] = useState('');
   const [runDisabled, setRunDisabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorkerConnected, setIsWorkerConnected] = useState(false);
   const [eventStreamId, setEventStreamId] = useState(null);
+  const errorRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
     const source = new EventSource(API + '/events');
     source.addEventListener('message', msg => {
       const data = JSON.parse(msg.data);
+      
       console.log(data);
       switch (data.status) {
         case 'QUEUED': case 'RUNNING':
@@ -62,6 +65,14 @@ const IDE = () => {
           setStdout(data.stdout);
           setStderr(data.stderr);
           setError(data.err);
+          setSignal(data.signal);
+          if (data.err || data.signal) {
+            setTimeout(() => {
+              errorRef.current?.scrollIntoView({
+                behavior: "smooth"
+              });
+            }, 500);
+          }
       }
       setStatus(statusMessage[data.status]);
   });
@@ -156,23 +167,28 @@ const IDE = () => {
             </div>
             <div className="io">
               <div className="io-block">
-                <label htmlFor="input">Input</label>
+                <label htmlFor="input">{"Input"}</label>
                 <textarea id="input" name="input" onChange={e => setInput(e.target.value)} value={input} />
               </div>
               <div className="io-block">
-                <label htmlFor="stdout">stdout</label>
+                <label htmlFor="stdout">{"stdout"}</label>
                 <textarea id="stdout" name="stdout" onChange={e => setStdout(e.target.value)} value={stdout} />
               </div>
               <div className="io-block">
-                <label htmlFor="stderr">stderr</label>
+                <label htmlFor="stderr">{"stderr"}</label>
                 <textarea id="stderr" name="stderr" onChange={e => setStderr(e.target.value)} value={stderr} />
               </div>
             </div>
           </div>
-          <div className="err">
-            <label htmlFor="error">Error</label>
-            <textarea id="error" onChange={e => setError(e.target.value)} value={error} />
-          </div>
+          {
+              <div ref={errorRef} className="err" style={{ display: (error || signal) ? 'grid' : 'none' }} id="error">
+                <label htmlFor="error">
+                  {"Error"}
+                  <span style={{ color: "rgba(0, 0, 0, 0.5)", fontSize: "14px", marginLeft: "10px" }}>{signal}</span>
+                </label>
+                <textarea id="error" onChange={e => setError(e.target.value)} value={error} />
+              </div>
+          }
         </div>
       </div>
     </div>

@@ -5,9 +5,13 @@ const WebSocketServer = require('rpc-websockets').Server;
 
 const asyncExec = (cmd) => {
   return new Promise((resolve, rejects) => {
-    exec(cmd, (err, stdout, stderr) => {
+    exec(cmd, { timeout: 2000 }, (err, stdout, stderr) => {
       if (err) {
-        rejects(err, stderr);
+        err.stderr = stderr;
+        if (err.signal === 'SIGTERM') {
+          err.stderr = "Process not ended in 2s."
+        }
+        rejects(err);
       }
       resolve({ stdout, stderr });
     })
@@ -45,26 +49,25 @@ const compileCode = async (code, input, eventId) => {
       type: "RUNNING",
       stdout: '',
       stderr: ''
-    })
+    })  
 
     await asyncExec('ulimit -S -v 1');
     let { stdout, stderr } = await asyncExec(`echo "${input}" | ./${name}.out`);
-
     server.emit(eventId, {
       type: "SUCCESS",
       stdout: stdout,
       stderr: stderr
     })
-
+    fs.unlinkSync(`./${name}.out`);
   } catch (err) {
     server.emit(eventId, {
       type: "COMPILATION_FAILED",
       stdout: '',
-      stderr: err
+      stderr: err.stderr,
+      signal: err.signal
     })
   }
   fs.unlinkSync(`./codes/${name}.cpp`);
-  fs.unlinkSync(`./${name}.out`);
 }
 
 function status() {

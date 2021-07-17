@@ -58,9 +58,8 @@
 
 .main {
   width: 90vw;
-  height: 130vh;
   display: grid;
-  grid-template-rows: 10vh 90vh 30vh;
+  grid-template-rows: 10vh 90vh auto;
   margin: 0 auto;
 }
 
@@ -161,8 +160,11 @@ input[type="submit"]:hover {
   margin: auto 0;
 }
 
-.err textarea {
-  width: 100%;
+.err {
+  height: 30vh;
+  padding-bottom: 70px;
+  display: grid;
+  grid-template-rows: 35px auto;
 }
 
 .err label {
@@ -173,10 +175,6 @@ input[type="submit"]:hover {
 
 #status {
   color: #647FA6;
-}
-
-.main {
-  padding-bottom: 70px;
 }
 
 @keyframes App-logo-spin {
@@ -192,8 +190,16 @@ input[type="submit"]:hover {
   .ide {
     grid-template-columns: 1fr;
     width: 90vw;
+    height: 180vh;
   }
 
+  .main {
+    grid-template-rows: 10vh 180vh auto;
+  }
+
+  .io {
+    padding-left: 0;
+  }
   .editor {
     width: 90vw;
   }

@@ -32,7 +32,8 @@ export const create = (req: Request, res: Response) => {
     err: "",
     stdout: "",
     stderr: "",
-    status: "pending"
+    status: "pending",
+    signal: ""
   };
 
   const { code, input, eventStreamId } = req.body;
@@ -49,6 +50,10 @@ export const create = (req: Request, res: Response) => {
             task.status = RUNNING;
             break;
           case 'COMPILATION_FAILED':
+            task.status = COMPLETED;
+            task.err = data.stderr;
+            task.signal = data.signal;
+            break;
           case 'RE':
           case 'TE':
           case 'MLE':
