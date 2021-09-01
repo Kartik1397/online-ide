@@ -5,7 +5,7 @@ const WebSocketServer = require('rpc-websockets').Server;
 
 const asyncExec = (cmd) => {
   return new Promise((resolve, rejects) => {
-    exec(cmd, { timeout: 2000 }, (err, stdout, stderr) => {
+    exec(cmd, { timeout: 20000 }, (err, stdout, stderr) => {
       if (err) {
         err.stderr = stderr;
         if (err.signal === 'SIGTERM') {
