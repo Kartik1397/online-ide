@@ -23,7 +23,7 @@
     "express": "^4.17.1",
     "express-rate-limit": "^5.2.6",
     "i": "^0.3.6",
-    "npm": "^7.14.0",
+    "npm": "^8.11.0",
     "rpc-websockets": "^7.4.12",
     "uuid": "^8.3.2"
   },
