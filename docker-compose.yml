@@ -8,7 +8,7 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
-      - WORKER_URI=worker:5000
+      - WORKER_URI=192.168.29.96:5000
     volumes:
       - "./server:/server"
       - /server/node_modules

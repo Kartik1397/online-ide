@@ -12,9 +12,9 @@ app.use(bodyParser.json());
 app.use('/task', taskRouter);
 
 app.get('/', (req, res) => {
-  res.send('Hello, World2!');
+    res.send('Hello, World2!');
 });
 
 app.listen(PORT, () => {
-  console.log(`Listening on ${PORT}!`);
+    console.log(`Listening on ${PORT}!`);
 });

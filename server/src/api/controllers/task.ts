@@ -13,6 +13,7 @@ ws.on('open', () => {
     sendWorkerStatusToClient(eventStreamId);
   });
 });
+
 ws.on('close', () =>{
   console.log('websocket closed')
   workerOnline = false;

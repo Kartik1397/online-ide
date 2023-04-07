@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { basicSetup } from "@codemirror/basic-setup";
 import { EditorState } from "@codemirror/state";
 import { defaultTabBinding } from "@codemirror/commands";
@@ -59,6 +59,7 @@ const IDE = () => {
           setIsWorkerConnected(true);
           break;
         default:
+          console.log(data.stderr);
           setStdout(data.stdout);
           setStderr(data.stderr);
           setError(data.err);
@@ -169,10 +170,12 @@ const IDE = () => {
               </div>
             </div>
           </div>
-          <div className="err">
-            <label htmlFor="error">Error</label>
-            <textarea id="error" onChange={e => setError(e.target.value)} value={error} />
-          </div>
+          { error.length > 0 &&
+            <div className="err">
+              <label htmlFor="error">Error</label>
+              <textarea id="error" onChange={e => setError(e.target.value)} value={error} />
+            </div>
+          }
         </div>
       </div>
     </div>

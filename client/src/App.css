@@ -58,9 +58,8 @@
 
 .main {
   width: 90vw;
-  height: 130vh;
   display: grid;
-  grid-template-rows: 10vh 90vh 30vh;
+  grid-template-rows: 10vh 90vh;
   margin: 0 auto;
 }
 
@@ -107,6 +106,12 @@
   grid-template-rows: 1fr 1fr 1fr;
   grid-gap: 20px;
   padding-left: 35px;
+}
+
+@media (max-width: 900px) {
+  .io {
+    padding-left: 0;
+  }
 }
 
 .io-block {
@@ -173,10 +178,6 @@ input[type="submit"]:hover {
 
 #status {
   color: #647FA6;
-}
-
-.main {
-  padding-bottom: 70px;
 }
 
 @keyframes App-logo-spin {
