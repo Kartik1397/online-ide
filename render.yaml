@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: online-ide-api
+    env: docker
+    region: singapore # optional (defaults to oregon)
+    rootDir: server
+    healthCheckPath: /
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+
