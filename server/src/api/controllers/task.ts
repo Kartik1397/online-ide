@@ -2,10 +2,13 @@ import { v4 as uuid4 } from 'uuid';
 import { Client as WebSocket } from 'rpc-websockets';
 import { Request, Response } from 'express';
 
-const ws = new WebSocket(`ws://${process.env.WORKER_URI}`, { max_reconnects: 0 });
+const WS_PROTO = process.env.NODE_ENV === 'production' ? 'wss' : 'ws';
+
+const ws = new WebSocket(`${WS_PROTO}://${process.env.WORKER_URI}`, { max_reconnects: 0 });
 
 const queue: Number[] = [];
 let workerOnline = false;
+
 ws.on('open', () => {
   console.log('websocket opened')
   workerOnline = true;
@@ -13,6 +16,11 @@ ws.on('open', () => {
     sendWorkerStatusToClient(eventStreamId);
   });
 });
+
+ws.on('error', (e) => {
+    console.log('error', e.message);
+});
+
 ws.on('close', () =>{
   console.log('websocket closed')
   workerOnline = false;
